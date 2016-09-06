@@ -1,0 +1,10 @@
+[package]
+name = "accountant"
+version = "0.1.0"
+authors = ["Jahfer Husain <jahferh@gmail.com>"]
+
+[dependencies]
+num = "0.1"
+quick-csv="0.1"
+rustc-serialize="0.3"
+prettytable-rs = "^0.6"
