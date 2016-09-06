@@ -11,7 +11,7 @@ fn import<T>(file_path: &'static Path) -> Vec<transaction::Transaction> where T:
 }
 
 fn main() {
-    let rows = import::<transaction::ScotiabankTxCsv>(Path::new("./data/tx/pcbanking.csv"));
+    let rows = import::<transaction::scotiabank::Csv>(Path::new("./data/tx/pcbanking.csv"));
 
     let mut table = Table::new();
     table.add_row(row!["ID", "DATE", "OWNER", "AMOUNT", "DESCRIPTION"]);
