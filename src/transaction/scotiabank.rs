@@ -21,22 +21,17 @@ impl Hash for Csv {
 }
 
 impl ImportableTransaction for Csv {
-    fn import(file_path:&'static Path) -> Vec<Option<Transaction>> {
+    fn import(file_path:&'static Path) -> Vec<Transaction> {
         csv_import::read::<Csv>(file_path, false)
             .into_iter()
-            .map(|pc_tx| {
-                match pc_tx {
-                    Some(tx) => Some(Transaction {
-                        source: TransactionSource::Scotiabank,
-                        identifier: to_hash(&tx),
-                        date: tx.date,
-                        amount: tx.amount,
-                        merchant: tx.merchant,
-                        description: Some(tx.description),
-                        note: None
-                    }),
-                    None => None
-                }
+            .map(|tx| Transaction {
+                source: TransactionSource::Scotiabank,
+                identifier: to_hash(&tx),
+                date: tx.date,
+                amount: tx.amount,
+                merchant: tx.merchant,
+                description: Some(tx.description),
+                note: None
             }).collect()
     }
 }

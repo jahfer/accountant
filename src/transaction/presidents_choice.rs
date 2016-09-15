@@ -7,7 +7,7 @@ use std::hash::{Hash, Hasher};
 pub struct Csv {
     transaction_date: String,
     _posting_date: String,
-    amount: f32,
+    amount: String,
     merchant: String,
     _merchant_city: String,
     _merchant_state: String,
@@ -23,23 +23,31 @@ impl Hash for Csv {
     }
 }
 
+// PC uses + amounts for credits, () amounts for debits
+fn convert_amount(amount: String) -> f32 {
+    let mut trimmed = amount;
+    if '(' == trimmed.chars().next().unwrap() {
+        let parens: &[char] = &['(', ')'];
+        trimmed = trimmed.trim_matches(parens).trim_left_matches('$').to_owned();
+    } else {
+        trimmed = String::from("-") + trimmed.trim_left_matches('$');
+    }
+
+    trimmed.parse::<f32>().unwrap()
+}
+
 impl ImportableTransaction for Csv {
-    fn import(file_path:&'static Path) -> Vec<Option<Transaction>> {
+    fn import(file_path:&'static Path) -> Vec<Transaction> {
         csv_import::read::<Csv>(file_path, true)
             .into_iter()
-            .map(|scotia_tx| {
-                match scotia_tx {
-                    Some(tx) => Some(Transaction {
-                        source: TransactionSource::PresidentsChoice,
-                        identifier: to_hash(&tx),
-                        date: tx.transaction_date,
-                        amount: tx.amount,
-                        merchant: tx.merchant,
-                        description: None,
-                        note: None
-                    }),
-                    None => None
-                }
+            .map(|tx| Transaction {
+                source: TransactionSource::PresidentsChoice,
+                identifier: to_hash(&tx),
+                date: tx.transaction_date,
+                amount: convert_amount(tx.amount),
+                merchant: tx.merchant,
+                description: None,
+                note: None
             }).collect()
     }
 }

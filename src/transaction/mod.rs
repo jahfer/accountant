@@ -29,7 +29,7 @@ pub struct Transaction {
 }
 
 pub trait ImportableTransaction {
-    fn import(file_path: &'static Path) -> Vec<Option<Transaction>>;
+    fn import(file_path: &'static Path) -> Vec<Transaction>;
 }
 
 fn to_hash<T: Hash>(t: &T) -> u64 {
