@@ -8,4 +8,6 @@ num = "0.1"
 csv = "^0.14"
 rustc-serialize = "0.3"
 prettytable-rs = "^0.6"
-
+chrono = { version = "0.2", features = ["rustc-serialize"] }
+regex = "0.1"
+lazy_static = "0.2"

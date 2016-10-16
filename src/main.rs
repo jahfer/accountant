@@ -1,39 +1,67 @@
 extern crate rustc_serialize;
+extern crate chrono;
+extern crate regex;
+extern crate num;
 #[macro_use] extern crate prettytable;
+#[macro_use] extern crate lazy_static;
 
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use prettytable::Table;
 
 mod transaction;
-use transaction::{Transaction, TransactionSource, ImportableTransaction};
+use transaction::{Transaction, TransactionSource, ImportableTransaction, Format};
 
-fn import<T>(file_path: &'static Path) -> Vec<Transaction> where T: ImportableTransaction {
+pub mod money;
+use money::Money;
+
+fn import<T>(file_path: &Path) -> Vec<Transaction> where T: ImportableTransaction {
     T::import(file_path)
 }
 
-fn read_csv_files(files: &[(transaction::TransactionSource, &'static str)]) -> Vec<Transaction> {
-    files.iter().flat_map(|&(ref tx_type, file)| {
-        let path = Path::new(file);
-        match *tx_type {
-            TransactionSource::Scotiabank => {
-                import::<transaction::scotiabank::Csv>(path)
+fn import_files(files: Vec<(TransactionSource, PathBuf)>) -> Vec<Transaction> {
+    files.into_iter().flat_map(|(tx_type, path_buf)| {
+        let path = path_buf.as_path().clone();
+        match tx_type {
+            TransactionSource::Scotiabank(format) => {
+                match format {
+                    Format::CSV => import::<transaction::scotiabank::Csv>(path)
+                }
             },
-            TransactionSource::PresidentsChoice => {
-                import::<transaction::presidents_choice::Csv>(path)
+            TransactionSource::PresidentsChoice(format) => {
+                match format {
+                    Format::CSV => import::<transaction::presidents_choice::Csv>(path)
+                }
             },
         }
-    }).collect()
+    }).collect::<Vec<Transaction>>()
 }
 
 fn main() {
-    let csv_files = [
-        (TransactionSource::Scotiabank, "./data/tx/scotiabank.csv"),
-        (TransactionSource::PresidentsChoice, "./data/tx/pcfinancial.csv")
+    let paths = [
+        (TransactionSource::Scotiabank(Format::CSV), Path::new("./data/tx/scotiabank/")),
+        (TransactionSource::PresidentsChoice(Format::CSV), Path::new("./data/tx/pc/"))
     ];
-    let rows = read_csv_files(&csv_files);
+
+    let files = paths.iter().flat_map(|&(ref format, dir)| {
+        let mut acc = Vec::new();
+        if dir.is_dir() {
+            for file in fs::read_dir(dir).unwrap() {
+                let path = file.unwrap().path();
+                acc.push((format.clone(), path));
+            }
+        }
+        
+        acc
+    }).collect::<Vec<_>>();
+
+    let mut rows = import_files(files);
+    rows.sort_by_key(|k| k.date);
 
     let mut table = Table::new();
-    table.add_row(row!["ID", "DATE", "OWNER", "AMOUNT", "SOURCE"]);
+    table.add_row(row!["ID", "DATE", "MERCHANT", "AMOUNT", "SOURCE"]);
+
+    println!("{}", rows.iter().map(|tx| &tx.amount).sum::<Money>());
 
     for tx in rows {
         table.add_row(row![tx.identifier, tx.date, tx.merchant, tx.amount, tx.source]);

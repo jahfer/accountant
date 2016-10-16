@@ -1,15 +1,21 @@
 use std::hash::{Hash, SipHasher, Hasher};
 use std::path::Path;
 use std::fmt::{self, Debug};
+use chrono::datetime::{DateTime};
+use chrono::Local;
+use ::money::Money;
 
 pub mod csv_import;
 pub mod scotiabank;
 pub mod presidents_choice;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum Format { CSV }
+
+#[derive(Debug, Clone)]
 pub enum TransactionSource {
-    Scotiabank,
-    PresidentsChoice
+    Scotiabank(Format),
+    PresidentsChoice(Format)
 }
 
 impl fmt::Display for TransactionSource {
@@ -21,15 +27,15 @@ impl fmt::Display for TransactionSource {
 pub struct Transaction {
     pub identifier: u64,
     pub source: TransactionSource,
-    pub date: String,
-    pub amount: f32,
+    pub date: DateTime<Local>,
+    pub amount: Money,
     pub merchant: String,
     pub description: Option<String>,
     pub note: Option<String>
 }
 
 pub trait ImportableTransaction {
-    fn import(file_path: &'static Path) -> Vec<Transaction>;
+    fn import(file_path: &Path) -> Vec<Transaction>;
 }
 
 fn to_hash<T: Hash>(t: &T) -> u64 {

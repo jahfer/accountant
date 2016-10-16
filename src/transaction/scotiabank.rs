@@ -1,15 +1,35 @@
 use std::path::Path;
 use super::csv_import;
-use super::{Transaction, ImportableTransaction, TransactionSource, to_hash};
+use super::{Transaction, ImportableTransaction, TransactionSource, Format, to_hash};
+use ::money::Money;
+use chrono::{TimeZone, DateTime, Local};
 use std::hash::{Hash, Hasher};
+use regex::Regex;
 
 #[derive(RustcDecodable,Clone)]
 pub struct Csv {
     date: String,
-    amount: f32,
+    amount: String,
     _unknown: Option<String>,
     description: String,
     merchant: String,
+}
+
+impl Csv {
+    fn date_as_datetime(&self) -> DateTime<Local> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^(\d{1,2})/(\d{1,2})/(\d{1,2})$").unwrap();
+        }
+
+        let captures = RE.captures(&self.date).unwrap();
+        let (month, day, year) = (captures.at(1), captures.at(2), captures.at(3));
+
+        Local.ymd(
+            (year.unwrap().parse::<i32>().unwrap() + 2000),
+            month.unwrap().parse::<u32>().unwrap(),
+            day.unwrap().parse::<u32>().unwrap()
+        ).and_hms(0,0,0)
+    }
 }
 
 impl Hash for Csv {
@@ -21,14 +41,14 @@ impl Hash for Csv {
 }
 
 impl ImportableTransaction for Csv {
-    fn import(file_path:&'static Path) -> Vec<Transaction> {
+    fn import(file_path: &Path) -> Vec<Transaction> {
         csv_import::read::<Csv>(file_path, false)
             .into_iter()
             .map(|tx| Transaction {
-                source: TransactionSource::Scotiabank,
+                source: TransactionSource::Scotiabank(Format::CSV),
                 identifier: to_hash(&tx),
-                date: tx.date,
-                amount: tx.amount,
+                date: tx.date_as_datetime(),
+                amount: Money::parse(&tx.amount),
                 merchant: tx.merchant,
                 description: Some(tx.description),
                 note: None
