@@ -2,11 +2,11 @@ use std::path::Path;
 use super::csv_import;
 use super::{Transaction, ImportableTransaction, TransactionSource, Format, to_hash};
 use ::money::Money;
-use chrono::{TimeZone, DateTime, Local};
+use chrono::{TimeZone, DateTime, UTC};
 use std::hash::{Hash, Hasher};
 use regex::Regex;
 
-#[derive(RustcDecodable,Clone)]
+#[derive(RustcDecodable)]
 pub struct Csv {
     date: String,
     amount: String,
@@ -16,7 +16,7 @@ pub struct Csv {
 }
 
 impl Csv {
-    fn date_as_datetime(&self) -> DateTime<Local> {
+    fn date_as_datetime(&self) -> DateTime<UTC> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"^(\d{1,2})/(\d{1,2})/(\d{1,2})$").unwrap();
         }
@@ -24,7 +24,7 @@ impl Csv {
         let captures = RE.captures(&self.date).unwrap();
         let (month, day, year) = (captures.at(1), captures.at(2), captures.at(3));
 
-        Local.ymd(
+        UTC.ymd(
             (year.unwrap().parse::<i32>().unwrap() + 2000),
             month.unwrap().parse::<u32>().unwrap(),
             day.unwrap().parse::<u32>().unwrap()

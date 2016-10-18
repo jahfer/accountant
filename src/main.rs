@@ -2,12 +2,11 @@ extern crate rustc_serialize;
 extern crate chrono;
 extern crate regex;
 extern crate num;
-#[macro_use] extern crate prettytable;
 #[macro_use] extern crate lazy_static;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use prettytable::Table;
+use chrono::TimeZone;
 
 mod transaction;
 use transaction::{Transaction, TransactionSource, ImportableTransaction, Format};
@@ -19,7 +18,7 @@ fn import<T>(file_path: &Path) -> Vec<Transaction> where T: ImportableTransactio
     T::import(file_path)
 }
 
-fn import_files(files: Vec<(TransactionSource, PathBuf)>) -> Vec<Transaction> {
+fn import_transactions(files: Vec<(TransactionSource, PathBuf)>) -> Vec<Transaction> {
     files.into_iter().flat_map(|(tx_type, path_buf)| {
         let path = path_buf.as_path().clone();
         match tx_type {
@@ -34,7 +33,16 @@ fn import_files(files: Vec<(TransactionSource, PathBuf)>) -> Vec<Transaction> {
                 }
             },
         }
-    }).collect::<Vec<Transaction>>()
+    }).collect()
+}
+
+fn spending_by_month(transactions: &Vec<Transaction>, month: u32) -> Money {
+    transactions
+        .clone()
+        .iter()
+        .filter(|tx| tx.date.date() >= chrono::UTC.ymd(2016, month % 12, 01))
+        .filter(|tx| tx.date.date() <  chrono::UTC.ymd(2016, (month + 1) % 12, 01))
+        .map(|tx| &tx.amount).sum::<Money>()
 }
 
 fn main() {
@@ -48,24 +56,25 @@ fn main() {
         if dir.is_dir() {
             for file in fs::read_dir(dir).unwrap() {
                 let path = file.unwrap().path();
-                acc.push((format.clone(), path));
+                if let Some(_) = path.extension() {
+                    acc.push((format.clone(), path));
+                }
             }
         }
         
         acc
     }).collect::<Vec<_>>();
 
-    let mut rows = import_files(files);
-    rows.sort_by_key(|k| k.date);
+    let transactions = import_transactions(files);
 
-    let mut table = Table::new();
-    table.add_row(row!["ID", "DATE", "MERCHANT", "AMOUNT", "SOURCE"]);
-
-    println!("{}", rows.iter().map(|tx| &tx.amount).sum::<Money>());
-
-    for tx in rows {
-        table.add_row(row![tx.identifier, tx.date, tx.merchant, tx.amount, tx.source]);
+    for &(month, num) in [
+        ("May",       5u32),
+        ("June",      6u32),
+        ("July",      7u32),
+        ("August",    8u32),
+        ("September", 9u32),
+        ("October",  10u32)
+    ].into_iter() {
+        println!("{}: {}", month, spending_by_month(&transactions, num));
     }
-
-    table.printstd();
 }

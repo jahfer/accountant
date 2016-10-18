@@ -2,7 +2,7 @@ use std::hash::{Hash, SipHasher, Hasher};
 use std::path::Path;
 use std::fmt::{self, Debug};
 use chrono::datetime::{DateTime};
-use chrono::Local;
+use chrono::UTC;
 use ::money::Money;
 
 pub mod csv_import;
@@ -24,10 +24,11 @@ impl fmt::Display for TransactionSource {
     }
 }
 
+#[derive(Debug)]
 pub struct Transaction {
     pub identifier: u64,
     pub source: TransactionSource,
-    pub date: DateTime<Local>,
+    pub date: DateTime<UTC>,
     pub amount: Money,
     pub merchant: String,
     pub description: Option<String>,
