@@ -7,6 +7,7 @@ use ::money::Money;
 
 pub mod csv_import;
 pub mod scotiabank;
+pub mod scotiabank_credit;
 pub mod presidents_choice;
 
 #[derive(Debug, Clone)]
@@ -15,6 +16,7 @@ pub enum Format { CSV }
 #[derive(Debug, Clone)]
 pub enum TransactionSource {
     Scotiabank(Format),
+    ScotiabankCredit(Format),
     PresidentsChoice(Format)
 }
 
